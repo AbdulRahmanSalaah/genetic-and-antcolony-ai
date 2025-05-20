@@ -2,7 +2,7 @@ import random
 import numpy as np
 import json
 from tetris_base import *  
-
+import matplotlib.pyplot as plt
 
 random.seed(42) 
 np.random.seed(42)
@@ -58,7 +58,7 @@ def rate_board(features, weights):
 # Parameters 
 POPULATION_SIZE = 15 
 GENERATIONS = 15      
-MUTATION_RATE = 0.15
+MUTATION_RATE = 0.1
 
 # random weights (chromosomes) , each chromosome is a list of weights for 5 features ranging from -5 to 5
 def init_population():
@@ -218,21 +218,38 @@ def mutate(weights):
 def genetic_algorithm():
     population = init_population()
     best_log = []
+    second_best_log = []  # New log for second best
     best_overall_score = 0
     best_overall_weights = None
 
     for gen in range(GENERATIONS):
         fitnesses = [evaluate_fitness(chromo) for chromo in population]
-        best_idx = np.argmax(fitnesses)
+        
+        # Get top 2 indices - we need both first and second best now
+        sorted_indices = np.argsort(fitnesses)
+        best_idx = sorted_indices[-1]  # Highest score
+        second_best_idx = sorted_indices[-2]  # Second highest score
+        
         best_score = fitnesses[best_idx]
+        second_best_score = fitnesses[second_best_idx]
+        
         best_weights = population[best_idx]
+        second_best_weights = population[second_best_idx]
         
         print(f"Generation {gen + 1}: Best score {best_score} with weights {best_weights}")
+        print(f"Generation {gen + 1}: Second best score {second_best_score} with weights {second_best_weights}")
 
+        # Log both best and second best
         best_log.append({
             'generation': gen + 1,
-            'best_score': int(best_score),
-            'best_weights': best_weights
+            'score': int(best_score),
+            'weights': best_weights
+        })
+        
+        second_best_log.append({
+            'generation': gen + 1,
+            'score': int(second_best_score),
+            'weights': second_best_weights
         })
         
         # Keep track of the best overall solution
@@ -253,29 +270,64 @@ def genetic_algorithm():
 
         population = children
 
-    # Save best weights from all generations
+
     with open("best_weights.json", "w") as f:
         json.dump(best_overall_weights, f)
 
-    # Save log
+
     with open("log.json", "w") as f:
-        json.dump(best_log, f)
+        json.dump({
+            'best': best_log,
+            'second_best': second_best_log
+        }, f)
 
     print(f"Training done! Best overall score: {best_overall_score}")
     print(f"Best weights saved to best_weights.json: {best_overall_weights}")
+    
     # Feature importance analysis
     feature_names = ["Aggregate Height", "Lines Cleared", "Holes", "Bumpiness", "Valley Depth"]
     print("\nFeature Importance Analysis:")
     for i, (name, weight) in enumerate(zip(feature_names, best_overall_weights)):
         print(f"{name}: {weight:.4f}")
     
-    
+    # Plot the progress of best and second best chromosomes
+    plot_progress(best_log, second_best_log)
     
     return best_overall_weights
 
 
-
+def plot_progress(best_log, second_best_log):
+    generations = [entry['generation'] for entry in best_log]
+    best_scores = [entry['score'] for entry in best_log]
+    second_best_scores = [entry['score'] for entry in second_best_log]
+    
+    plt.figure(figsize=(12, 6))
+    
+    # Plot both lines
+    plt.plot(generations, best_scores, 'b-', linewidth=2, marker='o', label='Best Chromosome')
+    plt.plot(generations, second_best_scores, 'r--', linewidth=2, marker='s', label='Second Best Chromosome')
+    
+    # Add labels and title
+    plt.xlabel('Generation', fontsize=12)
+    plt.ylabel('Score', fontsize=12)
+    plt.title('Evolution of Best and Second Best Chromosomes', fontsize=14)
+    
+    # Add grid and legend
+    plt.grid(True, linestyle='--', alpha=0.7)
+    plt.legend(fontsize=12)
+    
+    # Ensure x-axis ticks are integers (generations)
+    plt.xticks(generations)
+    
+    # Add annotations for key improvements
+    max_score_idx = best_scores.index(max(best_scores))
+    plt.annotate(f'Peak: {best_scores[max_score_idx]}', 
+                xy=(generations[max_score_idx], best_scores[max_score_idx]),
+                xytext=(generations[max_score_idx]+0.3, best_scores[max_score_idx]+200),
+                arrowprops=dict(facecolor='black', shrink=0.05, width=1.5))
+    
+    
+    plt.show()
 
 if __name__ == "__main__":
-     genetic_algorithm()
-
+    genetic_algorithm()
