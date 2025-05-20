@@ -56,9 +56,9 @@ def rate_board(features, weights):
     return sum(f * w for f, w in zip(features, weights))  # multiply features with weights and sum 
 
 # Parameters 
-POPULATION_SIZE = 12  
-GENERATIONS = 10      
-MUTATION_RATE = 0.2
+POPULATION_SIZE = 15 
+GENERATIONS = 15      
+MUTATION_RATE = 0.15
 
 # random weights (chromosomes) , each chromosome is a list of weights for 5 features ranging from -5 to 5
 def init_population():
